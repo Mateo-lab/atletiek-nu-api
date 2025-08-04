@@ -15,7 +15,7 @@ pub struct AthleteEventResults {
     pub name: String,
     pub competition_id: u32,
     pub competition_name: String,
-    pub results: Option<Vec<EventResult>>,
+    pub results: Vec<EventResult>,
     pub timetable: Vec<TimetableEvent>,
     pub participated_in: CompetitionRegistrationList,
 }
@@ -64,14 +64,10 @@ pub enum DnfReason {
 
 impl AthleteEventResults {
     pub fn get_total_points(&self) -> Option<u16> {
-        if self.results.is_none() {
-            return None;
-        }
-
         let mut points = 0;
         let mut no_points = true;
 
-        for i in self.results.as_ref().unwrap().iter() {
+        for i in self.results.iter() {
             for item in i.items.iter() {
                 match item {
                     EventResultItem::Points { amount } => {
@@ -276,11 +272,11 @@ pub fn parse(html: Html) -> anyhow::Result<AthleteEventResults> {
                 })
             }
 
-            Some(res)
+            res
         },
         None => {
             info!("No results found");
-            None
+            vec![]
         }
     };
 
