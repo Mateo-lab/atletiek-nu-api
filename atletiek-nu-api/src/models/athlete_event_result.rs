@@ -14,6 +14,7 @@ const REGEX_COMPETITION_ID: &'static str = r#"wedstrijd/main/([0-9]{0,})/"#;
 pub struct AthleteEventResults {
     pub name: String,
     pub competition_id: u32,
+    pub competition_name: String,
     pub results: Vec<EventResult>,
     pub timetable: Vec<TimetableEvent>,
     pub participated_in: CompetitionRegistrationList,
@@ -105,8 +106,10 @@ pub fn parse(html: Html) -> anyhow::Result<AthleteEventResults> {
     let re_competition_id = Regex::new(&REGEX_COMPETITION_ID).unwrap();
 
     let name = html.select(&name_element_selector).next().unwrap().text().filter(|v| !v.trim().is_empty()).next().unwrap().trim().to_string().replace("  ", " ");
-    let competition_url = html.select(&competition_element_selector).next().unwrap().value().attr("href").unwrap();
+    let competition_breadcrumb = html.select(&competition_element_selector).next().unwrap();
+    let competition_url = competition_breadcrumb.value().attr("href").unwrap();
     let competition_id = re_competition_id.captures_iter(competition_url).next().unwrap()[1].parse().unwrap();
+    let competition_name = competition_breadcrumb.text().next().unwrap().trim().to_string();
 
     let mut results = Vec::new();
     let participated_in = super::competition_registrations_list::parse(html.root_element())?;
@@ -296,5 +299,5 @@ pub fn parse(html: Html) -> anyhow::Result<AthleteEventResults> {
     }
 
 
-    Ok(AthleteEventResults { name, competition_id, results: res, timetable, participated_in })
+    Ok(AthleteEventResults { name, competition_id, competition_name, results: res, timetable, participated_in })
 }
