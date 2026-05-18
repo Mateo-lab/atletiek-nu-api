@@ -6,4 +6,4 @@ send_metrics = false
 workers_dev = true
 
 [build]
-command = "cargo install -q worker-build && worker-build --release"
+command = "cargo install -q \"worker-build@^0.1\" && worker-build --release"

@@ -39,37 +39,42 @@ pub fn parse(element: ElementRef) -> anyhow::Result<CompetitionRegistrationList>
 
     if let Some(competitions_table) = element.select(&competition_list_selector).next() {
         for row in competitions_table.select(&competition_list_row_selector) {
-            let link = row.select(&competition_list_link_selector).next().unwrap();
-            //dbg!(row.html());
-            let date: String = row.select(&competition_list_sortdata_selector).next()
-                .unwrap()
-                .value().attr("data").unwrap()
-                // we want to drop the location from the string so keep only digits
-                .chars().filter(|v| v.is_ascii_digit()).collect();
+            let Some(link) = row.select(&competition_list_link_selector).next() else { continue };
 
-            let date = NaiveDate::parse_from_str(&date, "%Y%m%d").unwrap();
-
-            let text = link.text().filter(|v| {
-                !v.trim().is_empty()
-            }).next().unwrap().trim().to_string();
-            let participant_id = if let Some(v) = link.select(&a_selector).next() {
-                // if there is a child, it will be <a> with a link to the competition
-               let s = v.value().attr("href").unwrap();
-                re_participant.captures_iter(s).next().unwrap()[1].parse().unwrap()
-            } else { 0 };
-
-            let location_element = row.select(&competition_list_location_selector).next().unwrap();
-            let place = location_element.text().next().unwrap();
-
-            let (flag_img_url, country, continent) = if let Some(location_img) = location_element.select(&img_selector).next() {
-                let flag_img_src = location_img.value().attr("src").unwrap();
-
-                let captures = re_location.captures_iter(location_img.value().attr("title").unwrap()).next().unwrap();
-                (flag_img_src.to_string(), captures[1].trim().to_string(), captures[2].trim().to_string())
-            } else {
-                ("".to_string(), "".to_string(), "".to_string())
+            let date_str: String = match row.select(&competition_list_sortdata_selector).next()
+                .and_then(|el| el.value().attr("data")) {
+                Some(d) => d.chars().filter(|v| v.is_ascii_digit()).collect(),
+                None => continue,
             };
 
+            let Ok(date) = NaiveDate::parse_from_str(&date_str, "%Y%m%d") else { continue };
+
+            let text = match link.text().filter(|v| !v.trim().is_empty()).next() {
+                Some(t) => t.trim().to_string(),
+                None => continue,
+            };
+            let participant_id = if let Some(v) = link.select(&a_selector).next() {
+                v.value().attr("href")
+                    .and_then(|s| re_participant.captures_iter(s).next())
+                    .and_then(|c| c[1].parse().ok())
+                    .unwrap_or(0)
+            } else { 0 };
+
+            let Some(location_element) = row.select(&competition_list_location_selector).next() else { continue };
+            let place = location_element.text().next().unwrap_or_default();
+
+            let (flag_img_url, country, continent) = if let Some(location_img) = location_element.select(&img_selector).next() {
+                let flag_img_src = location_img.value().attr("src").unwrap_or_default();
+
+                let title = location_img.value().attr("title").unwrap_or_default();
+                if let Some(captures) = re_location.captures_iter(title).next() {
+                    (flag_img_src.to_string(), captures[1].trim().to_string(), captures[2].trim().to_string())
+                } else {
+                    (flag_img_src.to_string(), String::new(), String::new())
+                }
+            } else {
+                (String::new(), String::new(), String::new())
+            };
 
             participated_in.push(CompetitionRegistration {
                 participant_id,
