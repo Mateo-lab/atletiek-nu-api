@@ -32,29 +32,28 @@ pub fn parse(html: Html) -> anyhow::Result<AthleteList> {
             .filter(|v| !v.is_empty())
             .collect();
 
+        if texts.len() < 2 { continue; }
         let name = texts[0].replace("  ", " ");
         let age_and_club = texts[1];
 
-        let captures = re_age_and_club.captures_iter(&age_and_club).next().unwrap();
+        let Some(captures) = re_age_and_club.captures_iter(&age_and_club).next() else { continue };
 
         let onclick = i
             .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .value()
-            .as_element()
-            .unwrap()
-            .attr("onclick")
-            .unwrap();
+            .and_then(|p| p.parent())
+            .and_then(|p| p.value().as_element())
+            .and_then(|e| e.attr("onclick"));
 
-        let athlete_id: u32 = re_athlete_id.captures_iter(onclick).next().unwrap()[1].parse()?;
+        let Some(onclick) = onclick else { continue };
+
+        let Some(id_cap) = re_athlete_id.captures_iter(onclick).next() else { continue };
+        let Ok(athlete_id) = id_cap[1].parse::<u32>() else { continue };
 
         res.push(AthleteListElement {
             id: athlete_id,
             name: name.to_string(),
             club_name: captures[2].to_string(),
-            age: captures[1].parse()?,
+            age: captures[1].parse().unwrap_or(0),
         });
     }
 
