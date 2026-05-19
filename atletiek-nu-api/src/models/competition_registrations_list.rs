@@ -1,4 +1,5 @@
 use chrono::NaiveDate;
+use log::trace;
 use regex::Regex;
 use scraper::{ElementRef, Selector};
 use serde::{Deserialize, Serialize};
@@ -39,19 +40,31 @@ pub fn parse(element: ElementRef) -> anyhow::Result<CompetitionRegistrationList>
 
     if let Some(competitions_table) = element.select(&competition_list_selector).next() {
         for row in competitions_table.select(&competition_list_row_selector) {
-            let Some(link) = row.select(&competition_list_link_selector).next() else { continue };
+            let Some(link) = row.select(&competition_list_link_selector).next() else {
+                trace!("skipping registration row: no link cell (td) found");
+                continue;
+            };
 
             let date_str: String = match row.select(&competition_list_sortdata_selector).next()
                 .and_then(|el| el.value().attr("data")) {
                 Some(d) => d.chars().filter(|v| v.is_ascii_digit()).collect(),
-                None => continue,
+                None => {
+                    trace!("skipping registration row: missing sortData span or data attribute");
+                    continue;
+                }
             };
 
-            let Ok(date) = NaiveDate::parse_from_str(&date_str, "%Y%m%d") else { continue };
+            let Ok(date) = NaiveDate::parse_from_str(&date_str, "%Y%m%d") else {
+                trace!("skipping registration row: could not parse date from {:?}", date_str);
+                continue;
+            };
 
             let text = match link.text().filter(|v| !v.trim().is_empty()).next() {
                 Some(t) => t.trim().to_string(),
-                None => continue,
+                None => {
+                    trace!("skipping registration row: link cell has no non-empty text");
+                    continue;
+                }
             };
             let participant_id = if let Some(v) = link.select(&a_selector).next() {
                 v.value().attr("href")
@@ -60,7 +73,10 @@ pub fn parse(element: ElementRef) -> anyhow::Result<CompetitionRegistrationList>
                     .unwrap_or(0)
             } else { 0 };
 
-            let Some(location_element) = row.select(&competition_list_location_selector).next() else { continue };
+            let Some(location_element) = row.select(&competition_list_location_selector).next() else {
+                trace!("skipping registration row: missing location element (name={:?})", text);
+                continue;
+            };
             let place = location_element.text().next().unwrap_or_default();
 
             let (flag_img_url, country, continent) = if let Some(location_img) = location_element.select(&img_selector).next() {

@@ -204,12 +204,21 @@ pub fn parse(html: Html) -> anyhow::Result<AthleteProfile> {
 
     for graph in html.select(&graph_selector) {
         for div in graph.select(&spec_div_selector) {
-            let Some(target) = div.value().attr("data-target") else { continue };
+            let Some(target) = div.value().attr("data-target") else {
+                trace!("skipping spec div: missing data-target attribute");
+                continue;
+            };
             let (event_id, spec) = {
-                let Some(captures) = re_div_spec.captures_iter(target).next() else { continue };
+                let Some(captures) = re_div_spec.captures_iter(target).next() else {
+                    trace!("skipping spec div: div_spec regex did not match: {:?}", target);
+                    continue;
+                };
                 (captures[1].to_string(), captures[2].to_string())
             };
-            let Some(text) = div.text().next() else { continue };
+            let Some(text) = div.text().next() else {
+                trace!("skipping spec div: no text content (event_id={}, spec={})", event_id, spec);
+                continue;
+            };
             let attr = match text {
                 "Everything" => EventAttribute::All,
                 _ => parse_attribute(text).unwrap(),
@@ -229,12 +238,21 @@ pub fn parse(html: Html) -> anyhow::Result<AthleteProfile> {
             let text = html.trim().replace("\t", "").replace("\n", "");
 
             let (event_name, point_count) = {
-                let Some(captures) = re_graph_info.captures_iter(&text).next() else { continue };
+                let Some(captures) = re_graph_info.captures_iter(&text).next() else {
+                    trace!("skipping graph script: graph_info regex did not match");
+                    continue;
+                };
                 (captures[1].to_string(), captures[2].parse::<usize>().unwrap_or(0))
             };
-            let Some(event_id_cap) = re_graph_event_id.captures_iter(&text).next() else { continue };
+            let Some(event_id_cap) = re_graph_event_id.captures_iter(&text).next() else {
+                trace!("skipping graph script: graph_event_id regex did not match (event={})", event_name);
+                continue;
+            };
             let event_id = event_id_cap[1].to_string();
-            let Some(spec_cap) = re_graph_spec.captures_iter(&text).next() else { continue };
+            let Some(spec_cap) = re_graph_spec.captures_iter(&text).next() else {
+                trace!("skipping graph script: graph_spec regex did not match (event={}, event_id={})", event_name, event_id);
+                continue;
+            };
             let specification = spec_cap[1].to_string();
             trace!("Found graph for {}, {} points (event id {}, spec {})", event_name, point_count, event_id, specification);
 
@@ -247,8 +265,15 @@ pub fn parse(html: Html) -> anyhow::Result<AthleteProfile> {
                     point[2].parse::<u32>(),
                     point[3].parse::<u32>(),
                     point[4].parse::<f32>(),
-                ) else { continue };
-                let Some(date) = NaiveDate::from_ymd_opt(year, month + 1, day) else { continue }; // JS months are 0-based
+                ) else {
+                    trace!("skipping graph point: failed to parse one of year/month/day/performance ({:?},{:?},{:?},{:?})",
+                        &point[1], &point[2], &point[3], &point[4]);
+                    continue;
+                };
+                let Some(date) = NaiveDate::from_ymd_opt(year, month + 1, day) else {
+                    trace!("skipping graph point: invalid date y={} m={} d={}", year, month + 1, day);
+                    continue;
+                }; // JS months are 0-based
 
                 points.push((date, performance));
             }
