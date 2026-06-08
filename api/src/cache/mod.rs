@@ -40,6 +40,15 @@ pub enum CachedRequest {
     GetAthleteProfile {
         id: u32
     },
+    GetAthleteProfileMobile {
+        id: u32
+    },
+    SearchCompetitionsMobile {
+        country: String,
+        start: NaiveDate,
+        end: NaiveDate,
+        query: String,
+    },
 }
 
 #[derive(Serialize)]
@@ -81,7 +90,20 @@ impl CachedRequest {
     }
     pub fn new_get_athlete_profile(id: u32) -> Self {
         Self::GetAthleteProfile{ id }
+    }
 
+    pub fn new_get_athlete_profile_mobile(id: u32) -> Self {
+        Self::GetAthleteProfileMobile { id }
+    }
+
+    pub fn new_search_competitions_mobile(
+        country: String,
+        start: NaiveDate,
+        end: NaiveDate,
+        query: Option<String>,
+    ) -> Self {
+        let query = query.unwrap_or_default().to_lowercase();
+        Self::SearchCompetitionsMobile { country, start, end, query }
     }
 
     fn cache_duration(&self) -> Duration {
@@ -91,6 +113,8 @@ impl CachedRequest {
             Self::GetCompetitionResults { .. } => Duration::from_secs(HOUR_IN_S * 24),
             Self::SearchAthletes { .. } => Duration::from_secs(HOUR_IN_S * 12),
             Self::GetAthleteProfile { .. } => Duration::from_secs(HOUR_IN_S * 12),
+            Self::GetAthleteProfileMobile { .. } => Duration::from_secs(HOUR_IN_S * 12),
+            Self::SearchCompetitionsMobile { .. } => Duration::from_secs(HOUR_IN_S * 12),
         }
     }
 
@@ -129,7 +153,20 @@ impl CachedRequest {
                 .map(|v| rocket::serde::json::to_string(&v).unwrap()),
             Self::GetAthleteProfile { id } => atletiek_nu_api::get_athlete_profile(*id)
                 .await
+                .map(|v| rocket::serde::json::to_string(&v).unwrap()),
+            Self::GetAthleteProfileMobile { id } => atletiek_nu_api::get_athlete_profile_mobile(*id)
+                .await
+                .map(|v| rocket::serde::json::to_string(&v).unwrap()),
+            Self::SearchCompetitionsMobile { country, start, end, query } => {
+                atletiek_nu_api::search_competitions_mobile(
+                    country,
+                    start.to_owned(),
+                    end.to_owned(),
+                    query,
+                )
+                .await
                 .map(|v| rocket::serde::json::to_string(&v).unwrap())
+            }
         } {
             Ok(v) => {
                 cache.insert(self, v.clone());

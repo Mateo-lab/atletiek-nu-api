@@ -42,3 +42,26 @@ pub async fn get_athlete_profile(id: u32, cache: RequestCache, ratelimiter: &Sta
     let req = CachedRequest::new_get_athlete_profile(id);
     req.run(cache, ratelimiter).await
 }
+
+/// Mobile endpoint: athlete profile with personal bests and per-event performance history.
+/// Not affected by Cloudflare Turnstile anti-bot protection.
+#[get("/mobile/athletes/profile/<id>")]
+pub async fn get_athlete_profile_mobile(id: u32, cache: RequestCache, ratelimiter: &State<RateLimiter>) -> ApiResponse {
+    let req = CachedRequest::new_get_athlete_profile_mobile(id);
+    req.run(cache, ratelimiter).await
+}
+
+/// Mobile endpoint: search competitions by country and date range.
+/// Not affected by Cloudflare Turnstile anti-bot protection.
+#[get("/mobile/competitions/search?<country>&<start>&<end>&<query>")]
+pub async fn search_competitions_mobile(
+    country: String,
+    start: RequestNaiveDate,
+    end: RequestNaiveDate,
+    query: Option<String>,
+    cache: RequestCache,
+    ratelimiter: &State<RateLimiter>,
+) -> ApiResponse {
+    let req = CachedRequest::new_search_competitions_mobile(country, start.0, end.0, query);
+    req.run(cache, ratelimiter).await
+}
