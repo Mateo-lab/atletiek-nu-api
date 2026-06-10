@@ -135,6 +135,42 @@ async fn main(req: Request, env: Env, ctx: Context) -> Result<Response> {
                 Response::error("Missing ID", 400)
             }
         })
+        .get_async("/mobile/competitions/detail/:id", |_req, ctx| async move {
+            if let Some(id) = ctx.param("id") {
+                if let Ok(id) = id.parse() {
+                    match atletiek_nu_api::get_competition_detail_mobile(id).await {
+                        Ok(r) => Response::from_json(&r),
+                        Err(e) => {
+                            let msg = e.to_string();
+                            console_error!("Error fetching competition detail {}: {}", id, msg);
+                            map_scraper_error(&msg)
+                        }
+                    }
+                } else {
+                    Response::error("Unable to parse ID", 400)
+                }
+            } else {
+                Response::error("Missing ID", 400)
+            }
+        })
+        .get_async("/mobile/competitions/program/:id", |_req, ctx| async move {
+            if let Some(id) = ctx.param("id") {
+                if let Ok(id) = id.parse() {
+                    match atletiek_nu_api::get_competition_program_mobile(id).await {
+                        Ok(r) => Response::from_json(&r),
+                        Err(e) => {
+                            let msg = e.to_string();
+                            console_error!("Error fetching competition program {}: {}", id, msg);
+                            map_scraper_error(&msg)
+                        }
+                    }
+                } else {
+                    Response::error("Unable to parse ID", 400)
+                }
+            } else {
+                Response::error("Missing ID", 400)
+            }
+        })
         .get_async("/mobile/competitions/search", |req, _ctx| async move {
             if let Ok(url) = req.url() {
                 let pairs: HashMap<String, String> = url

@@ -15,6 +15,8 @@ use urlencoding;
 pub use crate::models::athlete_event_result::AthleteEventResults;
 use crate::models::athlete_list::AthleteList;
 pub use crate::models::athlete_profile_mobile::MobileAthleteProfile;
+pub use crate::models::competition_detail_mobile::MobileCompetitionDetail;
+pub use crate::models::competition_program_mobile::MobileCompetitionProgram;
 pub use crate::models::competitions_list_mobile::MobileCompetitionsList;
 use crate::models::registrations_list::RegistrationsList;
 use crate::traits::CompetitionID;
@@ -188,6 +190,32 @@ pub async fn search_competitions_mobile(
     );
     let body = send_request(&url).await?;
     models::competitions_list_mobile::parse(Html::parse_fragment(&body))
+}
+
+/// Fetch competition detail using the mobile endpoint (bypasses Cloudflare Turnstile).
+///
+/// Returns metadata (name, date, location, description) and the categories table
+/// showing which age groups can participate with their available events and pricing.
+pub async fn get_competition_detail_mobile(event_id: u32) -> anyhow::Result<MobileCompetitionDetail> {
+    let url = format!(
+        "https://www.athletics.app/athleteapp.php?page=event&do=get&event_id={}&language=en_GB&version=1.16",
+        event_id
+    );
+    let body = send_request(&url).await?;
+    models::competition_detail_mobile::parse(Html::parse_fragment(&body))
+}
+
+/// Fetch competition program using the mobile endpoint (bypasses Cloudflare Turnstile).
+///
+/// Returns the full program: gender groups → age categories → event groups → events.
+/// More detailed than the categories table from `get_competition_detail_mobile`.
+pub async fn get_competition_program_mobile(event_id: u32) -> anyhow::Result<MobileCompetitionProgram> {
+    let url = format!(
+        "https://www.athletics.app/athleteapp.php?page=event&do=program&event_id={}&language=en_GB&version=1.16",
+        event_id
+    );
+    let body = send_request(&url).await?;
+    models::competition_program_mobile::parse(Html::parse_fragment(&body))
 }
 
 pub async fn get_competitions_for_time_period(
