@@ -49,6 +49,12 @@ pub enum CachedRequest {
         end: NaiveDate,
         query: String,
     },
+    GetCompetitionDetailMobile {
+        id: u32,
+    },
+    GetCompetitionProgramMobile {
+        id: u32,
+    },
 }
 
 #[derive(Serialize)]
@@ -106,6 +112,14 @@ impl CachedRequest {
         Self::SearchCompetitionsMobile { country, start, end, query }
     }
 
+    pub fn new_get_competition_detail_mobile(id: u32) -> Self {
+        Self::GetCompetitionDetailMobile { id }
+    }
+
+    pub fn new_get_competition_program_mobile(id: u32) -> Self {
+        Self::GetCompetitionProgramMobile { id }
+    }
+
     fn cache_duration(&self) -> Duration {
         match self {
             Self::SearchCompetitions { .. } => Duration::from_secs(HOUR_IN_S * 12),
@@ -115,6 +129,8 @@ impl CachedRequest {
             Self::GetAthleteProfile { .. } => Duration::from_secs(HOUR_IN_S * 12),
             Self::GetAthleteProfileMobile { .. } => Duration::from_secs(HOUR_IN_S * 12),
             Self::SearchCompetitionsMobile { .. } => Duration::from_secs(HOUR_IN_S * 12),
+            Self::GetCompetitionDetailMobile { .. } => Duration::from_secs(HOUR_IN_S * 12),
+            Self::GetCompetitionProgramMobile { .. } => Duration::from_secs(HOUR_IN_S * 12),
         }
     }
 
@@ -167,6 +183,12 @@ impl CachedRequest {
                 .await
                 .map(|v| rocket::serde::json::to_string(&v).unwrap())
             }
+            Self::GetCompetitionDetailMobile { id } => atletiek_nu_api::get_competition_detail_mobile(*id)
+                .await
+                .map(|v| rocket::serde::json::to_string(&v).unwrap()),
+            Self::GetCompetitionProgramMobile { id } => atletiek_nu_api::get_competition_program_mobile(*id)
+                .await
+                .map(|v| rocket::serde::json::to_string(&v).unwrap()),
         } {
             Ok(v) => {
                 cache.insert(self, v.clone());

@@ -5,6 +5,8 @@ pub mod athlete_profile_mobile;
 pub mod competitions_list;
 pub mod competitions_list_mobile;
 pub mod competitions_list_web;
+pub mod competition_detail_mobile;
+pub mod competition_program_mobile;
 pub mod competition_registrations_list;
 pub mod registrations_list;
 pub mod registrations_list_web;

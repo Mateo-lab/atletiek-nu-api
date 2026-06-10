@@ -65,3 +65,19 @@ pub async fn search_competitions_mobile(
     let req = CachedRequest::new_search_competitions_mobile(country, start.0, end.0, query);
     req.run(cache, ratelimiter).await
 }
+
+/// Mobile endpoint: competition detail with categories, events, and pricing.
+/// Not affected by Cloudflare Turnstile anti-bot protection.
+#[get("/mobile/competitions/detail/<id>")]
+pub async fn get_competition_detail_mobile(id: u32, cache: RequestCache, ratelimiter: &State<RateLimiter>) -> ApiResponse {
+    let req = CachedRequest::new_get_competition_detail_mobile(id);
+    req.run(cache, ratelimiter).await
+}
+
+/// Mobile endpoint: full competition program (gender → category → event groups → events).
+/// Not affected by Cloudflare Turnstile anti-bot protection.
+#[get("/mobile/competitions/program/<id>")]
+pub async fn get_competition_program_mobile(id: u32, cache: RequestCache, ratelimiter: &State<RateLimiter>) -> ApiResponse {
+    let req = CachedRequest::new_get_competition_program_mobile(id);
+    req.run(cache, ratelimiter).await
+}
